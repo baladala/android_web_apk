@@ -2,7 +2,7 @@
 <widget id="com.example.simplewebview" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>网页浏览器</name>
     <description>
-        A sample Apache Cordova application that responds to the deviceready event.
+        打开任意网页的简单浏览器
     </description>
     <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
         Apache Cordova Team
@@ -10,4 +10,11 @@
     <content src="index.html" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
+    <access origin="*" />
+    <preference name="AndroidCleartextTraffic" value="true" />
+    <plugin name="cordova-plugin-device" spec="~2.1.0" />
+    <plugin name="cordova-plugin-inappbrowser" spec="~5.0.0" />
+    <permission name="android.permission.INTERNET" />
+    <allow-navigation href="http://*/*" />
+    <allow-navigation href="https://*/*" />
 </widget>
