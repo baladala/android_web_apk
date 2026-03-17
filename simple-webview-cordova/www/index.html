@@ -12,142 +12,173 @@
         }
         body, html {
             height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #2196F3;
+            overflow: hidden;
         }
-        .container {
-            height: 100%;
+        /* 顶部导航栏（始终显示）*/
+        .top-bar {
+            background: #2196F3;
+            color: white;
+            padding: 8px 12px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            height: 48px;
+        }
+        .top-bar input {
+            flex: 1;
+            padding: 6px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .top-bar .btn-change {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        /* iframe 容器占满剩余空间 */
+        #webContainer {
+            width: 100%;
+            height: calc(100% - 48px);
+        }
+        #webFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        /* 初始弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 9999;
             justify-content: center;
             align-items: center;
-            padding: 20px;
         }
-        .card {
+        .modal.show {
+            display: flex;
+        }
+        .modal-card {
             background: white;
-            padding: 30px 24px;
+            padding: 24px;
             border-radius: 12px;
-            width: 100%;
+            width: 90%;
             max-width: 400px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
-        h1 {
-            text-align: center;
+        .modal-card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
             color: #333;
-            font-size: 24px;
-            margin-bottom: 8px;
         }
-        .subtitle {
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 24px;
-        }
-        label {
-            display: block;
-            color: #333;
-            font-size: 14px;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        input {
+        .modal-card input {
             width: 100%;
-            padding: 14px 12px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 16px;
+            margin-bottom: 16px;
         }
-        input:focus {
-            outline: none;
-            border-color: #2196F3;
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
         }
-        .btn-open {
-            width: 100%;
-            padding: 14px;
-            background: #2196F3;
-            color: white;
+        .btn {
+            padding: 8px 16px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .btn-open:hover {
-            background: #1976D2;
-        }
-        .saved-urls {
-            margin-top: 20px;
-        }
-        .saved-url {
-            display: inline-block;
-            background: #f0f0f0;
-            padding: 6px 12px;
             border-radius: 4px;
-            margin: 4px;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
+        }
+        .btn-cancel {
+            background: #f5f5f5;
             color: #333;
         }
-        .saved-url:hover {
-            background: #e0e0e0;
-        }
-        .clear-btn {
-            text-align: right;
-            font-size: 12px;
-            color: #999;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-        .clear-btn:hover {
-            color: #f44336;
+        .btn-confirm {
+            background: #2196F3;
+            color: white;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card">
-            <h1>网页浏览器</h1>
-            <p class="subtitle">输入网址，在原生 WebView 中打开</p>
+    <div class="top-bar">
+        <input type="url" id="currentUrl" placeholder="https://example.com">
+        <button class="btn-change" id="changeBtn">更换网址</button>
+    </div>
 
-            <div class="form-group">
-                <label for="urlInput">网址</label>
-                <input type="url" id="urlInput" placeholder="https://example.com">
+    <div id="webContainer">
+        <iframe id="webFrame"></iframe>
+    </div>
+
+    <div id="urlModal" class="modal">
+        <div class="modal-card">
+            <h2>输入网址</h2>
+            <input type="url" id="modalUrlInput" placeholder="https://example.com">
+            <div class="modal-buttons">
+                <button class="btn btn-cancel" id="cancelBtn">取消</button>
+                <button class="btn btn-confirm" id="confirmBtn">确定</button>
             </div>
-
-            <div id="historyContainer" class="saved-urls" style="display: none;">
-                <label>历史记录</label>
-                <div id="historyList"></div>
-                <div class="clear-btn" id="clearBtn">清除历史</div>
-            </div>
-
-            <button class="btn-open" id="openBtn">打开网页</button>
         </div>
     </div>
 
     <script type="text/javascript" src="cordova.js"></script>
     <script type="text/javascript">
-        const HISTORY_KEY = 'url_history';
-        const MAX_HISTORY = 5;
+        const SAVED_URL_KEY = 'saved_url';
 
         document.addEventListener('deviceready', onDeviceReady, false);
 
         function onDeviceReady() {
-            loadHistory();
-
-            document.getElementById('openBtn').addEventListener('click', openUrl);
-            document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            // 绑定事件
+            document.getElementById('changeBtn').addEventListener('click', showModal);
+            document.getElementById('confirmBtn').addEventListener('click', confirmUrl);
+            document.getElementById('cancelBtn').addEventListener('click', hideModal);
+            document.getElementById('modalUrlInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') confirmUrl();
+            });
+            document.getElementById('currentUrl').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    openUrl();
+                    const url = document.getElementById('currentUrl').value.trim();
+                    if (url) loadUrl(url);
                 }
             });
-            document.getElementById('clearBtn').addEventListener('click', clearHistory);
+
+            // 检查是否有保存的网址
+            const savedUrl = localStorage.getItem(SAVED_URL_KEY);
+            if (savedUrl && savedUrl.length > 0) {
+                // 有保存的网址，直接加载
+                document.getElementById('currentUrl').value = savedUrl;
+                loadUrl(savedUrl);
+            } else {
+                // 第一次打开，显示弹窗
+                showModal();
+            }
         }
 
-        function openUrl() {
-            const input = document.getElementById('urlInput');
+        function showModal() {
+            const modal = document.getElementById('urlModal');
+            const input = document.getElementById('modalUrlInput');
+            const current = document.getElementById('currentUrl').value;
+            if (current) {
+                input.value = current;
+            }
+            modal.classList.add('show');
+            input.focus();
+        }
+
+        function hideModal() {
+            document.getElementById('urlModal').classList.remove('show');
+        }
+
+        function confirmUrl() {
+            const input = document.getElementById('modalUrlInput');
             let url = input.value.trim();
 
             if (url.length === 0) {
@@ -159,69 +190,17 @@
                 url = 'https://' + url;
             }
 
-            // 保存到历史记录
-            saveToHistory(url);
+            // 保存网址
+            localStorage.setItem(SAVED_URL_KEY, url);
+            document.getElementById('currentUrl').value = url;
 
-            // 用 InAppBrowser 打开（真正的原生 WebView）
-            cordova.InAppBrowser.open(url, '_blank', 'location=yes,toolbar=yes,clearcache=yes,clearsessioncache=yes');
+            hideModal();
+            loadUrl(url);
         }
 
-        function saveToHistory(url) {
-            let history = getHistory();
-            // 去重
-            history = history.filter(item => item !== url);
-            // 添加到开头
-            history.unshift(url);
-            // 限制数量
-            if (history.length > MAX_HISTORY) {
-                history = history.slice(0, MAX_HISTORY);
-            }
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-            loadHistory();
-        }
-
-        function getHistory() {
-            const data = localStorage.getItem(HISTORY_KEY);
-            if (!data) return [];
-            try {
-                return JSON.parse(data);
-            } catch(e) {
-                return [];
-            }
-        }
-
-        function loadHistory() {
-            const history = getHistory();
-            const container = document.getElementById('historyContainer');
-            const list = document.getElementById('historyList');
-
-            if (history.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            list.innerHTML = '';
-
-            history.forEach(url => {
-                const div = document.createElement('span');
-                div.className = 'saved-url';
-                // 只显示域名
-                let display = url.replace(/^https?:\/\//, '');
-                if (display.length > 25) {
-                    display = display.substring(0, 22) + '...';
-                }
-                div.textContent = display;
-                div.addEventListener('click', () => {
-                    document.getElementById('urlInput').value = url;
-                });
-                list.appendChild(div);
-            });
-        }
-
-        function clearHistory() {
-            localStorage.removeItem(HISTORY_KEY);
-            loadHistory();
+        function loadUrl(url) {
+            const frame = document.getElementById('webFrame');
+            frame.src = url;
         }
     </script>
 </body>
